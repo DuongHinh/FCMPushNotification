@@ -18,57 +18,72 @@ namespace FCMPushNotification.Controllers
         [Route("sendmessage")]
         public IHttpActionResult SendMessage()
         {
-
+            //device token
+            var deviceTokens = "fB1LI8dwZVo:APA91bHdxC6kd4KFMvhFIpyyn1hNMS2dZVDVScBgGwWe1E8sVSAv9YnYhXNxG5lvXXvyc-MKj8sk7hL_H79tbF05UcCg_d_tAzAyAUuNZ_Tc71Ae3_nv8AZPhlb0jQa0r62nxoig8LNq7gEmZCtgl7C3DbQbFGOBTA";
             var data = new
-            {
-                to = "BOF1Zo_js1NYkY_cvneGSUxQPFOFbxb_brYj2s2kBOPrD6DIOnH3sMkpFZnJvGeJmzNscXTzLihdIZ4uVSywqpM",
+            {    
+                to = deviceTokens,
                 data = new {
-                    message = "Your message",
-                    name = "Your name",
-                    id = 1,
+                    message = "Firebase Notifications",
                     status = true
-
                 }
             };
 
             SendNotification(data);
-
             return Ok();
         }
 
-        public void SendNotification(object data)
+        public string SendNotification(object data)
         {
-            try
-            {
-                var serializer = new JavaScriptSerializer();
-                var json = serializer.Serialize(data);
-                Byte[] byteArray = Encoding.UTF8.GetBytes(json);
+            var serializer = new JavaScriptSerializer();
+            var json = serializer.Serialize(data);
+            Byte[] byteArray = Encoding.UTF8.GetBytes(json);
 
-                string server_api_key = ConfigurationManager.AppSettings["SERVER_API_KEY"];
-                var sender_id = ConfigurationManager.AppSettings["SENDER_ID"];
-                // Create Request
-                WebRequest tRequest;
-                tRequest = WebRequest.Create("https://fcm.googleapis.com/fcm/send");     // FCM link
-                tRequest.Method = "post";
-                tRequest.ContentType = "application/json";
-                tRequest.Headers.Add($"Authorization: key ={server_api_key}");     //Server Api Key Header
-                tRequest.Headers.Add($"Sender: id ={sender_id}");     // Sender Id Header
-                tRequest.ContentLength = byteArray.Length;
-                Stream dataStream = tRequest.GetRequestStream();
-                dataStream.Write(byteArray, 0, byteArray.Length);
-                dataStream.Close();
-                WebResponse tResponse = tRequest.GetResponse();
-                dataStream = tResponse.GetResponseStream();
-                StreamReader tReader = new StreamReader(dataStream);
-                String sResponseFromServer = tReader.ReadToEnd();
-                tReader.Close();
-                dataStream.Close();
-                tResponse.Close();
-            }
-            catch
+            var server_api_key = ConfigurationManager.AppSettings["FCM_SeverApiKey"].ToString();
+            var sender_id = ConfigurationManager.AppSettings["FCM_SenderId"].ToString();
+            var uriSendNotification = ConfigurationManager.AppSettings["FCM_UriSendNotification"].ToString();
+
+            // Create Request
+            var request = WebRequest.Create(uriSendNotification) as HttpWebRequest;     // FCM link
+
+            if (request != null)
             {
-                throw;
+                request.KeepAlive = true;
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                request.Headers.Add($"Authorization: key ={server_api_key}");     //Server Api Key Header
+                request.Headers.Add($"Sender: id ={sender_id}");     // Sender Id Header
+                request.ContentLength = byteArray.Length;
+
+                string responseFromServer = null;
+
+                try
+                {
+                    using (var dataStream = request.GetRequestStream())
+                    {
+                        dataStream.Write(byteArray, 0, byteArray.Length);
+                    }
+
+                    using (var response = request.GetResponse() as HttpWebResponse)
+                    {
+                        using (var reader = new StreamReader(response.GetResponseStream()))
+                        {
+                            responseFromServer = reader.ReadToEnd();
+                        }
+                    }
+
+
+                }
+                catch (WebException ex)
+                {
+
+                    throw new WebException(ex.Message);
+                }
+
+                return responseFromServer;
             }
+
+            return null;
         }
     }
 }
