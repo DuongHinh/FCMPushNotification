@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
@@ -18,7 +19,7 @@ namespace FCMPushNotification.Controllers
         [Route("sendmessage")]
         public IHttpActionResult SendMessage()
         {
-            //device token
+            //device token, if multiple device token split by ','
             var deviceTokens = "fB1LI8dwZVo:APA91bHdxC6kd4KFMvhFIpyyn1hNMS2dZVDVScBgGwWe1E8sVSAv9YnYhXNxG5lvXXvyc-MKj8sk7hL_H79tbF05UcCg_d_tAzAyAUuNZ_Tc71Ae3_nv8AZPhlb0jQa0r62nxoig8LNq7gEmZCtgl7C3DbQbFGOBTA";
             var data = new
             {    
@@ -29,8 +30,16 @@ namespace FCMPushNotification.Controllers
                 }
             };
 
-            SendNotification(data);
-            return Ok();
+            object jsonResponse = null;
+
+            var response = SendNotification(data);
+
+            if (response != null)
+            {
+                jsonResponse = JsonConvert.DeserializeObject<object>(response);
+            }
+
+            return Ok(jsonResponse);
         }
 
         public string SendNotification(object data)
